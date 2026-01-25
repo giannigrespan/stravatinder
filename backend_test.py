@@ -305,13 +305,12 @@ def main():
         ("Unauthorized Access", tester.test_unauthorized_access),
     ]
     
-    # Also test with existing credentials
-    print("\n🔄 Testing with existing test user...")
-    if tester.test_login():
-        print("✅ Login with test credentials successful")
-        tester.test_get_profile()
-        tester.test_discover_users()
-        tester.test_get_matches()
+    # Run all tests
+    for test_name, test_func in tests:
+        try:
+            test_func()
+        except Exception as e:
+            tester.log_test(test_name, False, f"Exception: {str(e)}")
     
     print("\n" + "=" * 50)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
