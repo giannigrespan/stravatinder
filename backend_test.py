@@ -299,7 +299,7 @@ def main():
         ("Get Route Detail", tester.test_get_route_detail),
         ("Like Route", tester.test_like_route),
         ("Discover Users", tester.test_discover_users),
-        ("Get Matches", tester.test_matches),
+        ("Get Matches", tester.test_get_matches),
         ("AI Route Suggestions", tester.test_ai_route_suggestions),
         ("Invalid Endpoint", tester.test_invalid_endpoints),
         ("Unauthorized Access", tester.test_unauthorized_access),
