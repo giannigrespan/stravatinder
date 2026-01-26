@@ -3,6 +3,7 @@
 ## Overview
 **App Name:** GravelMatch  
 **Tagline:** "Trova il tuo prossimo ride"  
+**Version:** 2.0.0  
 **Description:** App mobile-first che combina funzionalità stile Strava (percorsi gravel) e Tinder (matching tra rider)
 
 ## User Personas
@@ -18,39 +19,104 @@
 - Chat 1-to-1 dopo il match
 - Suggerimenti AI personalizzati
 
-## What's Been Implemented (Jan 2026)
+## What's Been Implemented
+
+### Version 1.0 (Jan 25, 2026)
+- ✅ Auth JWT completa
+- ✅ Profilo utente con profilazione gravel
+- ✅ CRUD percorsi
+- ✅ Sistema swipe e matching
+- ✅ Chat 1-to-1
+- ✅ AI suggestions (GPT-5.2)
+
+### Version 2.0 (Jan 26, 2026) - NEW FEATURES
+- ✅ **Filtri avanzati Discover**: età min/max, distanza min/max, livello, zona
+- ✅ **Mappa Leaflet**: visualizzazione percorsi con marker colorati (partenza verde, arrivo rosso)
+- ✅ **Map Picker**: selezione punto partenza su mappa interattiva
+- ✅ **Upload Cloudinary**: immagini percorsi e foto profilo (resize automatico, face detection per profili)
+- ✅ **Sistema Notifiche**: 
+  - Bell icon con badge unread count
+  - Panel laterale slide-in
+  - Notifiche per match e messaggi
+  - Mark as read singolo/tutti
+- ✅ Campo età nel profilo per filtri matching
 
 ### Backend (FastAPI + MongoDB)
-- ✅ API REST completa con autenticazione JWT
-- ✅ CRUD utenti con profilazione (livello, distanza, zona)
-- ✅ CRUD percorsi con difficoltà, tags, likes
-- ✅ Sistema swipe e matching
-- ✅ Chat real-time per match
-- ✅ AI suggestions con GPT-5.2 (Emergent LLM Key)
-- ✅ Endpoint health check
+- ✅ API REST completa v2.0.0
+- ✅ Cloudinary integration per upload
+- ✅ Notifications collection e endpoints
+- ✅ Filtri avanzati discover con query builder
 
 ### Frontend (React + TailwindCSS + Framer Motion)
-- ✅ Landing page con hero image
-- ✅ Login/Registrazione con validazione
-- ✅ Profile Setup wizard (3 step)
-- ✅ Home feed percorsi
-- ✅ Creazione percorsi con form completo
-- ✅ Dettaglio percorso con like/share
-- ✅ Discover page con swipe cards animati
-- ✅ Match detection e modal celebrativo
-- ✅ Lista matches con preview messaggi
-- ✅ Chat interface con invio messaggi
-- ✅ Settings con modifica profilo
-- ✅ Bottom navigation mobile
-- ✅ AI suggestions card in home
-- ✅ Dark theme "Gravel Dark" (Terracotta accent)
+- ✅ DiscoverFilters component (modal bottom sheet)
+- ✅ RouteMap component (Leaflet, dark tiles CARTO)
+- ✅ RouteMapPicker component (click to select)
+- ✅ ImageUpload component (drag & drop, preview)
+- ✅ ProfilePictureUpload component
+- ✅ NotificationBell + NotificationPanel + NotificationProvider
 
-### Design
-- ✅ Mobile-first responsive
-- ✅ Glassmorphism effects
-- ✅ Custom fonts (Manrope, Inter, Chivo Mono)
-- ✅ Micro-animations con Framer Motion
-- ✅ Swipe gestures per matching
+## API Endpoints v2.0
+
+### Auth
+```
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/me
+```
+
+### Profile
+```
+PUT  /api/profile
+```
+
+### Routes
+```
+GET  /api/routes
+POST /api/routes
+GET  /api/routes/{id}
+POST /api/routes/{id}/like
+```
+
+### Discovery & Matching
+```
+GET  /api/discover?min_age=&max_age=&min_distance=&max_distance=&experience_level=&zone=
+POST /api/swipe
+GET  /api/matches
+```
+
+### Chat
+```
+GET  /api/chat/{match_id}
+POST /api/chat
+```
+
+### Upload (NEW)
+```
+POST /api/upload/image
+POST /api/upload/profile-picture
+```
+
+### Notifications (NEW)
+```
+GET  /api/notifications
+GET  /api/notifications/unread-count
+PUT  /api/notifications/{id}/read
+PUT  /api/notifications/read-all
+```
+
+### AI
+```
+GET  /api/ai/route-suggestions
+GET  /api/ai/match-tips?target_user_id=
+```
+
+## Technical Stack
+- **Frontend:** React 18, TailwindCSS, Framer Motion, React Router, Leaflet
+- **Backend:** FastAPI, PyMongo, python-jose (JWT), Cloudinary
+- **Database:** MongoDB
+- **AI:** GPT-5.2 via Emergent LLM Key
+- **Cloud:** Cloudinary (images)
+- **Hosting:** Emergent Platform
 
 ## Prioritized Backlog
 
@@ -59,18 +125,22 @@
 - [x] Core matching flow
 - [x] Route creation
 - [x] Chat basic
+- [x] Advanced filters
+- [x] Map integration
+- [x] Image upload
+- [x] Notifications
 
 ### P1 (High Priority)
-- [ ] Google OAuth integration (configurato ma non abilitato)
-- [ ] Notifiche push per nuovi match/messaggi
-- [ ] Filtri avanzati per discover (età, distanza max)
-- [ ] Mappa interattiva con Leaflet per percorsi
+- [ ] Google OAuth integration
+- [ ] Push notifications (web push API)
+- [ ] Real-time chat (WebSocket)
+- [ ] Infinite scroll routes feed
 
-### P2 (Medium Priority)  
-- [ ] Upload immagini profilo/percorsi (Cloudinary)
+### P2 (Medium Priority)
 - [ ] Gruppi/eventi per uscite collettive
 - [ ] Statistiche personali (km totali, match)
 - [ ] Export/import GPX percorsi
+- [ ] Route waypoints editor
 
 ### P3 (Nice to Have)
 - [ ] Dark/Light theme toggle
@@ -78,34 +148,13 @@
 - [ ] Integrazione Strava API
 - [ ] Gamification (badges, livelli)
 
-## Technical Stack
-- **Frontend:** React 18, TailwindCSS, Framer Motion, React Router
-- **Backend:** FastAPI, PyMongo, python-jose (JWT)
-- **Database:** MongoDB
-- **AI:** GPT-5.2 via Emergent LLM Key
-- **Hosting:** Emergent Platform
-
-## API Endpoints Summary
-```
-POST /api/auth/register - Registrazione
-POST /api/auth/login - Login
-GET  /api/auth/me - User corrente
-PUT  /api/profile - Aggiorna profilo
-GET  /api/routes - Lista percorsi
-POST /api/routes - Crea percorso
-GET  /api/routes/{id} - Dettaglio percorso
-POST /api/routes/{id}/like - Like percorso
-GET  /api/discover - Utenti da scoprire
-POST /api/swipe - Like/Dislike utente
-GET  /api/matches - Lista match
-GET  /api/chat/{match_id} - Messaggi chat
-POST /api/chat - Invia messaggio
-GET  /api/ai/route-suggestions - Suggerimenti AI percorsi
-GET  /api/ai/match-tips - Tips conversazione AI
-```
+## Cloudinary Configuration
+- Cloud Name: dxzxdgzeh
+- Folders: gravelmatch/routes, gravelmatch/profiles
+- Auto-transformations: resize, quality auto, format auto
+- Face detection for profile pictures
 
 ## Next Tasks
-1. Aggiungere filtri avanzati in discover
-2. Implementare notifiche push
-3. Integrare mappa Leaflet per visualizzazione percorsi
-4. Upload immagini con Cloudinary
+1. Implementare WebSocket per chat real-time
+2. Aggiungere Web Push API per notifiche native
+3. Eventi/gruppi per uscite collettive
