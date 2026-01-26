@@ -383,7 +383,7 @@ def main():
     # Test sequence
     tests = [
         ("Health Check", tester.test_health_check),
-        ("User Registration", tester.test_register),
+        ("User Login", tester.test_login),
         ("Get Profile", tester.test_get_profile),
         ("Update Profile", tester.test_update_profile),
         ("Create Route", tester.test_create_route),
@@ -391,7 +391,10 @@ def main():
         ("Get Route Detail", tester.test_get_route_detail),
         ("Like Route", tester.test_like_route),
         ("Discover Users", tester.test_discover_users),
+        ("Discover with Filters", tester.test_discover_with_filters),
         ("Get Matches", tester.test_get_matches),
+        ("Notifications System", tester.test_notifications),
+        ("Image Upload Endpoints", tester.test_image_upload_endpoints),
         ("AI Route Suggestions", tester.test_ai_route_suggestions),
         ("Invalid Endpoint", tester.test_invalid_endpoints),
         ("Unauthorized Access", tester.test_unauthorized_access),
