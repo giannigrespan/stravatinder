@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './components/Notifications';
 import { Toaster } from 'sonner';
 
 // Pages
@@ -67,19 +68,21 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-background">
-          <AppRoutes />
-          <Toaster 
-            position="top-center" 
-            toastOptions={{
-              style: {
-                background: '#18181b',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#F4F4F5'
-              }
-            }}
-          />
-        </div>
+        <NotificationProvider>
+          <div className="min-h-screen bg-background">
+            <AppRoutes />
+            <Toaster 
+              position="top-center" 
+              toastOptions={{
+                style: {
+                  background: '#18181b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#F4F4F5'
+                }
+              }}
+            />
+          </div>
+        </NotificationProvider>
       </Router>
     </AuthProvider>
   );
