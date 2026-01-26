@@ -4,6 +4,7 @@ import { Users, RefreshCw, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
 import { SwipeCard } from '../components/SwipeCard';
+import { DiscoverFilters } from '../components/DiscoverFilters';
 import { toast } from 'sonner';
 
 export default function Discover() {
@@ -15,15 +16,36 @@ export default function Discover() {
   const [matchedUser, setMatchedUser] = useState(null);
   const [aiTips, setAiTips] = useState('');
   const [showTips, setShowTips] = useState(false);
+  const [filters, setFilters] = useState({
+    min_age: null,
+    max_age: null,
+    min_distance: null,
+    max_distance: null,
+    experience_level: '',
+    zone: ''
+  });
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    if (filters.min_age) params.append('min_age', filters.min_age);
+    if (filters.max_age) params.append('max_age', filters.max_age);
+    if (filters.min_distance) params.append('min_distance', filters.min_distance);
+    if (filters.max_distance) params.append('max_distance', filters.max_distance);
+    if (filters.experience_level) params.append('experience_level', filters.experience_level);
+    if (filters.zone) params.append('zone', filters.zone);
+    return params.toString();
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/discover');
+      const queryString = buildQueryString();
+      const url = `/api/discover${queryString ? `?${queryString}` : ''}`;
+      const response = await api.get(url);
       setUsers(response.data);
       setCurrentIndex(0);
     } catch (error) {
@@ -64,6 +86,10 @@ export default function Discover() {
     }
   };
 
+  const handleFiltersApply = () => {
+    fetchUsers();
+  };
+
   const currentUser = users[currentIndex];
 
   return (
@@ -75,13 +101,20 @@ export default function Discover() {
             <Users className="text-primary" size={20} />
             <h1 className="text-xl font-bold text-zinc-100 font-heading">Scopri Rider</h1>
           </div>
-          <button
-            onClick={fetchUsers}
-            className="p-2 rounded-full hover:bg-white/5 transition-colors"
-            data-testid="refresh-users"
-          >
-            <RefreshCw size={20} className="text-zinc-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <DiscoverFilters 
+              filters={filters} 
+              onFiltersChange={setFilters}
+              onApply={handleFiltersApply}
+            />
+            <button
+              onClick={fetchUsers}
+              className="p-2 rounded-full hover:bg-white/5 transition-colors"
+              data-testid="refresh-users"
+            >
+              <RefreshCw size={20} className="text-zinc-400" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -104,7 +137,7 @@ export default function Discover() {
               <Users size={32} className="text-zinc-600" />
             </div>
             <h3 className="text-xl font-semibold text-zinc-300 mb-2">Nessun rider disponibile</h3>
-            <p className="text-zinc-500 mb-6">Riprova più tardi o aggiorna</p>
+            <p className="text-zinc-500 mb-6">Prova a modificare i filtri o riprova più tardi</p>
             <button
               onClick={fetchUsers}
               className="bg-primary text-white hover:bg-primary/90 rounded-full px-6 py-3 font-medium flex items-center gap-2"

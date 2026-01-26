@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, LogOut, Mountain, Ruler, MapPin, ChevronRight, Edit2 } from 'lucide-react';
+import { User, LogOut, Mountain, Ruler, MapPin, ChevronRight, Edit2, Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
+import { ProfilePictureUpload } from '../components/ImageUpload';
+import { NotificationBell, NotificationPanel } from '../components/Notifications';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -15,7 +17,8 @@ export default function Settings() {
     bio: user?.bio || '',
     experience_level: user?.experience_level || '',
     avg_distance: user?.avg_distance || '',
-    preferred_zone: user?.preferred_zone || ''
+    preferred_zone: user?.preferred_zone || '',
+    age: user?.age || ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +33,8 @@ export default function Settings() {
     try {
       await updateProfile({
         ...profile,
-        avg_distance: profile.avg_distance ? parseInt(profile.avg_distance) : null
+        avg_distance: profile.avg_distance ? parseInt(profile.avg_distance) : null,
+        age: profile.age ? parseInt(profile.age) : null
       });
       setEditing(false);
       toast.success('Profilo aggiornato');
@@ -39,6 +43,10 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProfilePictureUpdate = (url) => {
+    // Profile picture is updated directly via the API
   };
 
   const levelLabels = {
@@ -53,35 +61,38 @@ export default function Settings() {
       <div className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-white/5 px-4 py-4 z-40">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-zinc-100 font-heading">Profilo</h1>
-          {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="p-2 rounded-full hover:bg-white/5 transition-colors"
-              data-testid="edit-profile"
-            >
-              <Edit2 size={18} className="text-zinc-400" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="p-2 rounded-full hover:bg-white/5 transition-colors"
+                data-testid="edit-profile"
+              >
+                <Edit2 size={18} className="text-zinc-400" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
+      <NotificationPanel />
+
       <div className="px-4 py-6 space-y-6">
-        {/* Profile Card */}
+        {/* Profile Card with Picture Upload */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-4 p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl"
         >
-          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
-            {user?.profile_picture ? (
-              <img src={user.profile_picture} alt={user.name} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              <User size={32} className="text-primary" />
-            )}
-          </div>
+          <ProfilePictureUpload 
+            currentImage={user?.profile_picture}
+            onUpload={handleProfilePictureUpdate}
+          />
           <div>
             <h2 className="text-xl font-bold text-zinc-100">{user?.name}</h2>
             <p className="text-zinc-500">{user?.email}</p>
+            {user?.age && <p className="text-sm text-zinc-400">{user.age} anni</p>}
           </div>
         </motion.div>
 
@@ -100,6 +111,20 @@ export default function Settings() {
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                 className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-zinc-100 transition-all"
                 data-testid="settings-name"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-zinc-400 mb-2 block">Età</label>
+              <input
+                type="number"
+                value={profile.age}
+                onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-zinc-100 transition-all"
+                placeholder="Es: 30"
+                min="18"
+                max="99"
+                data-testid="settings-age"
               />
             </div>
 

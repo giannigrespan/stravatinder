@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Mountain, Heart, Share2, User } from 'lucide-react';
+import { ArrowLeft, MapPin, Mountain, Heart, Share2, User, Map } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
+import { RouteMap } from '../components/RouteMap';
 import { toast } from 'sonner';
 
 export default function RouteDetail() {
@@ -13,6 +14,7 @@ export default function RouteDetail() {
   const [route, setRoute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     fetchRoute();
@@ -72,6 +74,8 @@ export default function RouteDetail() {
 
   if (!route) return null;
 
+  const hasMapData = route.start_point?.lat && route.start_point?.lng;
+
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Hero Image */}
@@ -94,6 +98,15 @@ export default function RouteDetail() {
 
         {/* Actions */}
         <div className="absolute top-4 right-4 flex gap-2">
+          {hasMapData && (
+            <button
+              onClick={() => setShowMap(!showMap)}
+              className={`w-10 h-10 rounded-full glass flex items-center justify-center ${showMap ? 'bg-primary/20' : ''}`}
+              data-testid="route-map-toggle"
+            >
+              <Map size={18} className={showMap ? 'text-primary' : 'text-zinc-200'} />
+            </button>
+          )}
           <button
             onClick={handleShare}
             className="w-10 h-10 rounded-full glass flex items-center justify-center"
@@ -126,6 +139,18 @@ export default function RouteDetail() {
               <span>{route.start_point?.name || 'Italia'}</span>
             </div>
           </div>
+
+          {/* Map Section */}
+          {showMap && hasMapData && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="rounded-xl overflow-hidden"
+            >
+              <RouteMap route={route} height="250px" />
+            </motion.div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3">

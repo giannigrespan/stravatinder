@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Mountain, Save, Camera } from 'lucide-react';
+import { ArrowLeft, MapPin, Mountain, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BottomNav } from '../components/BottomNav';
+import { ImageUpload } from '../components/ImageUpload';
+import { RouteMapPicker } from '../components/RouteMap';
 import { toast } from 'sonner';
 
 export default function CreateRoute() {
   const navigate = useNavigate();
   const { api } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [route, setRoute] = useState({
     title: '',
     description: '',
     distance: '',
     elevation: '',
     difficulty: 'moderate',
-    start_point: { name: '', lat: 0, lng: 0 },
+    start_point: { name: '', lat: null, lng: null },
     image_url: '',
     tags: []
   });
@@ -61,6 +64,17 @@ export default function CreateRoute() {
     }
   };
 
+  const handleMapPointSelect = (point) => {
+    setRoute({
+      ...route,
+      start_point: {
+        ...route.start_point,
+        lat: point.lat,
+        lng: point.lng
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Header */}
@@ -77,34 +91,20 @@ export default function CreateRoute() {
       </div>
 
       <form onSubmit={handleSubmit} className="px-4 py-6 space-y-6">
-        {/* Image Upload Placeholder */}
+        {/* Image Upload with Cloudinary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative h-48 rounded-xl bg-zinc-900/50 border border-zinc-800 border-dashed flex items-center justify-center cursor-pointer hover:border-zinc-700 transition-colors overflow-hidden"
         >
-          {route.image_url ? (
-            <img src={route.image_url} alt="Preview" className="w-full h-full object-cover" />
-          ) : (
-            <div className="text-center">
-              <Camera size={32} className="text-zinc-600 mx-auto mb-2" />
-              <p className="text-sm text-zinc-500">Aggiungi una foto</p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Image URL */}
-        <div>
-          <label className="text-sm text-zinc-400 mb-2 block">URL Immagine (opzionale)</label>
-          <input
-            type="url"
-            value={route.image_url}
-            onChange={(e) => setRoute({ ...route, image_url: e.target.value })}
-            className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-zinc-100 placeholder:text-zinc-600 transition-all"
-            placeholder="https://..."
-            data-testid="route-image-url"
+          <label className="text-sm text-zinc-400 mb-2 block">Foto del percorso</label>
+          <ImageUpload
+            currentImage={route.image_url}
+            onUpload={(url) => setRoute({ ...route, image_url: url })}
+            folder="gravelmatch/routes"
+            aspectRatio="video"
+            placeholder="Carica una foto del percorso"
           />
-        </div>
+        </motion.div>
 
         {/* Title */}
         <div>
@@ -136,18 +136,16 @@ export default function CreateRoute() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm text-zinc-400 mb-2 block">Distanza (km) *</label>
-            <div className="relative">
-              <input
-                type="number"
-                value={route.distance}
-                onChange={(e) => setRoute({ ...route, distance: e.target.value })}
-                className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-zinc-100 placeholder:text-zinc-600 transition-all"
-                placeholder="50"
-                min="1"
-                required
-                data-testid="route-distance"
-              />
-            </div>
+            <input
+              type="number"
+              value={route.distance}
+              onChange={(e) => setRoute({ ...route, distance: e.target.value })}
+              className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-zinc-100 placeholder:text-zinc-600 transition-all"
+              placeholder="50"
+              min="1"
+              required
+              data-testid="route-distance"
+            />
           </div>
           <div>
             <label className="text-sm text-zinc-400 mb-2 block">Dislivello (m)</label>
@@ -174,12 +172,45 @@ export default function CreateRoute() {
             <input
               type="text"
               value={route.start_point.name}
-              onChange={(e) => setRoute({ ...route, start_point: { ...route.start_point, name: e.target.value } })}
+              onChange={(e) => setRoute({ 
+                ...route, 
+                start_point: { ...route.start_point, name: e.target.value } 
+              })}
               className="w-full bg-zinc-950/50 border border-zinc-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg pl-10 pr-4 py-3 text-zinc-100 placeholder:text-zinc-600 transition-all"
               placeholder="Es: Piazza del Campo, Siena"
               data-testid="route-start"
             />
           </div>
+          
+          {/* Map Picker Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowMapPicker(!showMapPicker)}
+            className="mt-2 text-sm text-primary hover:underline flex items-center gap-1"
+            data-testid="toggle-map-picker"
+          >
+            <MapPin size={14} />
+            {showMapPicker ? 'Nascondi mappa' : 'Seleziona sulla mappa'}
+          </button>
+          
+          {showMapPicker && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mt-3"
+            >
+              <RouteMapPicker 
+                value={route.start_point}
+                onChange={handleMapPointSelect}
+                height="200px"
+              />
+              {route.start_point.lat && (
+                <p className="text-xs text-zinc-500 mt-2">
+                  Coordinate: {route.start_point.lat.toFixed(4)}, {route.start_point.lng.toFixed(4)}
+                </p>
+              )}
+            </motion.div>
+          )}
         </div>
 
         {/* Difficulty */}
