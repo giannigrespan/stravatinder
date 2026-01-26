@@ -6,7 +6,6 @@
     "axios": "^1.6.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "expo": "^54.0.32",
     "framer-motion": "^11.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.331.0",
