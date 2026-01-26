@@ -235,6 +235,50 @@ class GravelMatchAPITester:
         )
         return success
 
+    def test_discover_with_filters(self):
+        """Test user discovery with advanced filters"""
+        # Test age filters
+        success1, response1 = self.run_test(
+            "Discover Users - Age Filter",
+            "GET",
+            "api/discover?min_age=25&max_age=45",
+            200
+        )
+        
+        # Test distance filters
+        success2, response2 = self.run_test(
+            "Discover Users - Distance Filter",
+            "GET",
+            "api/discover?min_distance=30&max_distance=80",
+            200
+        )
+        
+        # Test experience level filter
+        success3, response3 = self.run_test(
+            "Discover Users - Level Filter",
+            "GET",
+            "api/discover?experience_level=intermediate",
+            200
+        )
+        
+        # Test zone filter
+        success4, response4 = self.run_test(
+            "Discover Users - Zone Filter",
+            "GET",
+            "api/discover?zone=Toscana",
+            200
+        )
+        
+        # Test combined filters
+        success5, response5 = self.run_test(
+            "Discover Users - Combined Filters",
+            "GET",
+            "api/discover?min_age=25&max_age=50&experience_level=intermediate&zone=Toscana",
+            200
+        )
+        
+        return success1 and success2 and success3 and success4 and success5
+
     def test_get_matches(self):
         """Test get matches"""
         success, response = self.run_test(
