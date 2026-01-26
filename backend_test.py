@@ -289,6 +289,54 @@ class GravelMatchAPITester:
         )
         return success
 
+    def test_notifications(self):
+        """Test notification system"""
+        # Test get notifications
+        success1, response1 = self.run_test(
+            "Get Notifications",
+            "GET",
+            "api/notifications",
+            200
+        )
+        
+        # Test get unread count
+        success2, response2 = self.run_test(
+            "Get Unread Count",
+            "GET",
+            "api/notifications/unread-count",
+            200
+        )
+        
+        # Test mark all as read
+        success3, response3 = self.run_test(
+            "Mark All Notifications Read",
+            "PUT",
+            "api/notifications/read-all",
+            200
+        )
+        
+        return success1 and success2 and success3
+
+    def test_image_upload_endpoints(self):
+        """Test image upload endpoints (without actual file)"""
+        # Test image upload endpoint exists (will fail without file, but should return proper error)
+        success1, response1 = self.run_test(
+            "Image Upload Endpoint Check",
+            "POST",
+            "api/upload/image",
+            422  # Expecting validation error for missing file
+        )
+        
+        # Test profile picture upload endpoint exists
+        success2, response2 = self.run_test(
+            "Profile Picture Upload Endpoint Check", 
+            "POST",
+            "api/upload/profile-picture",
+            422  # Expecting validation error for missing file
+        )
+        
+        return success1 and success2
+
     def test_ai_route_suggestions(self):
         """Test AI route suggestions"""
         success, response = self.run_test(
