@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Depends, Query
+from fastapi import FastAPI, HTTPException, status, Depends, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
@@ -10,11 +10,12 @@ from pymongo import MongoClient
 from bson import ObjectId
 import os
 from dotenv import load_dotenv
-import asyncio
+import cloudinary
+import cloudinary.uploader
 
 load_dotenv()
 
-app = FastAPI(title="GravelMatch API", version="1.0.0")
+app = FastAPI(title="GravelMatch API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,6 +37,14 @@ routes_collection = db["routes"]
 matches_collection = db["matches"]
 messages_collection = db["messages"]
 swipes_collection = db["swipes"]
+notifications_collection = db["notifications"]
+
+# Cloudinary Configuration
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
+)
 
 # Security
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -59,19 +68,27 @@ class UserProfile(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
     profile_picture: Optional[str] = None
-    experience_level: Optional[str] = None  # beginner, intermediate, expert
-    avg_distance: Optional[int] = None  # km
+    experience_level: Optional[str] = None
+    avg_distance: Optional[int] = None
     preferred_zone: Optional[str] = None
     location: Optional[str] = None
     age: Optional[int] = None
 
+class DiscoverFilters(BaseModel):
+    min_age: Optional[int] = None
+    max_age: Optional[int] = None
+    min_distance: Optional[int] = None
+    max_distance: Optional[int] = None
+    experience_level: Optional[str] = None
+    zone: Optional[str] = None
+
 class RouteCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    distance: float  # km
-    elevation: Optional[int] = None  # meters
-    difficulty: str  # easy, moderate, hard, extreme
-    start_point: dict  # {lat, lng, name}
+    distance: float
+    elevation: Optional[int] = None
+    difficulty: str
+    start_point: dict
     end_point: Optional[dict] = None
     waypoints: Optional[List[dict]] = []
     image_url: Optional[str] = None
@@ -79,7 +96,7 @@ class RouteCreate(BaseModel):
 
 class SwipeAction(BaseModel):
     target_user_id: str
-    action: str  # like, dislike
+    action: str
 
 class MessageCreate(BaseModel):
     match_id: str
@@ -88,6 +105,10 @@ class MessageCreate(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class NotificationSubscription(BaseModel):
+    endpoint: str
+    keys: dict
 
 # Helper functions
 def get_password_hash(password: str) -> str:
@@ -190,7 +211,6 @@ async def update_profile(profile: UserProfile, current_user = Depends(get_curren
     update_data = {k: v for k, v in profile.model_dump().items() if v is not None}
     
     if update_data:
-        # Check if profile is complete
         required_fields = ["experience_level", "avg_distance", "preferred_zone"]
         current_data = {**current_user, **update_data}
         profile_completed = all(current_data.get(f) for f in required_fields)
@@ -203,6 +223,73 @@ async def update_profile(profile: UserProfile, current_user = Depends(get_curren
     
     updated_user = users_collection.find_one({"_id": current_user["_id"]})
     return serialize_user(updated_user)
+
+# Image Upload Endpoint
+@app.post("/api/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    folder: str = Query(default="gravelmatch"),
+    current_user = Depends(get_current_user)
+):
+    """Upload image to Cloudinary"""
+    try:
+        # Read file content
+        contents = await file.read()
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=folder,
+            resource_type="image",
+            transformation=[
+                {"width": 1200, "height": 1200, "crop": "limit"},
+                {"quality": "auto:good"},
+                {"fetch_format": "auto"}
+            ]
+        )
+        
+        return {
+            "success": True,
+            "url": result["secure_url"],
+            "public_id": result["public_id"],
+            "width": result.get("width"),
+            "height": result.get("height")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@app.post("/api/upload/profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
+    """Upload and set profile picture"""
+    try:
+        contents = await file.read()
+        
+        result = cloudinary.uploader.upload(
+            contents,
+            folder="gravelmatch/profiles",
+            resource_type="image",
+            transformation=[
+                {"width": 500, "height": 500, "crop": "fill", "gravity": "face"},
+                {"quality": "auto:good"},
+                {"fetch_format": "auto"}
+            ]
+        )
+        
+        # Update user profile
+        users_collection.update_one(
+            {"_id": current_user["_id"]},
+            {"$set": {"profile_picture": result["secure_url"]}}
+        )
+        
+        return {
+            "success": True,
+            "url": result["secure_url"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 # Routes Endpoints
 @app.post("/api/routes")
@@ -259,28 +346,62 @@ async def like_route(route_id: str, current_user = Depends(get_current_user)):
     )
     return {"success": True}
 
-# Discovery/Matching Endpoints
+# Discovery/Matching Endpoints with Advanced Filters
 @app.get("/api/discover")
-async def discover_users(current_user = Depends(get_current_user)):
+async def discover_users(
+    min_age: Optional[int] = None,
+    max_age: Optional[int] = None,
+    min_distance: Optional[int] = None,
+    max_distance: Optional[int] = None,
+    experience_level: Optional[str] = None,
+    zone: Optional[str] = None,
+    current_user = Depends(get_current_user)
+):
+    """Discover users with advanced filters"""
     # Get users this user has already swiped on
     swiped = swipes_collection.find({"user_id": current_user["_id"]})
     swiped_ids = [s["target_user_id"] for s in swiped]
     swiped_ids.append(current_user["_id"])
     
-    # Find users with completed profiles, excluding swiped ones
+    # Base query
     query = {
         "_id": {"$nin": swiped_ids},
         "profile_completed": True
     }
     
-    # Optional: filter by similar preferences
-    if current_user.get("experience_level"):
+    # Age filter
+    if min_age is not None:
+        query["age"] = {"$gte": min_age}
+    if max_age is not None:
+        if "age" in query:
+            query["age"]["$lte"] = max_age
+        else:
+            query["age"] = {"$lte": max_age}
+    
+    # Distance filter (avg_distance preference)
+    if min_distance is not None:
+        query["avg_distance"] = {"$gte": min_distance}
+    if max_distance is not None:
+        if "avg_distance" in query:
+            query["avg_distance"]["$lte"] = max_distance
+        else:
+            query["avg_distance"] = {"$lte": max_distance}
+    
+    # Experience level filter
+    if experience_level:
+        query["experience_level"] = experience_level
+    elif current_user.get("experience_level"):
+        # Default: match similar levels
         levels = {
             "beginner": ["beginner", "intermediate"],
             "intermediate": ["beginner", "intermediate", "expert"],
             "expert": ["intermediate", "expert"]
         }
         query["experience_level"] = {"$in": levels.get(current_user["experience_level"], [])}
+    
+    # Zone filter
+    if zone:
+        query["preferred_zone"] = zone
     
     users = users_collection.find(query).limit(20)
     return [serialize_user(u) for u in users]
@@ -316,6 +437,29 @@ async def swipe(action: SwipeAction, current_user = Depends(get_current_user)):
             result = matches_collection.insert_one(match_doc)
             match = True
             match_id = str(result.inserted_id)
+            
+            # Create notification for both users
+            target_user = users_collection.find_one({"_id": target_id})
+            notifications_collection.insert_many([
+                {
+                    "user_id": current_user["_id"],
+                    "type": "match",
+                    "title": "Nuovo Match!",
+                    "body": f"Tu e {target_user.get('name', 'un rider')} vi siete piaciuti!",
+                    "data": {"match_id": match_id},
+                    "read": False,
+                    "created_at": datetime.now(timezone.utc)
+                },
+                {
+                    "user_id": target_id,
+                    "type": "match",
+                    "title": "Nuovo Match!",
+                    "body": f"Tu e {current_user.get('name', 'un rider')} vi siete piaciuti!",
+                    "data": {"match_id": match_id},
+                    "read": False,
+                    "created_at": datetime.now(timezone.utc)
+                }
+            ])
     
     return {"success": True, "match": match, "match_id": match_id}
 
@@ -329,7 +473,6 @@ async def get_matches(current_user = Depends(get_current_user)):
         other_user_id = [u for u in m["users"] if u != current_user["_id"]][0]
         other_user = users_collection.find_one({"_id": other_user_id})
         
-        # Get last message
         last_msg = messages_collection.find_one(
             {"match_id": m["_id"]},
             sort=[("created_at", -1)]
@@ -379,6 +522,18 @@ async def send_message(msg: MessageCreate, current_user = Depends(get_current_us
     }
     result = messages_collection.insert_one(new_msg)
     
+    # Create notification for recipient
+    other_user_id = [u for u in match["users"] if u != current_user["_id"]][0]
+    notifications_collection.insert_one({
+        "user_id": other_user_id,
+        "type": "message",
+        "title": f"Nuovo messaggio da {current_user.get('name', 'un rider')}",
+        "body": msg.content[:50] + ("..." if len(msg.content) > 50 else ""),
+        "data": {"match_id": msg.match_id},
+        "read": False,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
     return {
         "id": str(result.inserted_id),
         "content": msg.content,
@@ -386,6 +541,57 @@ async def send_message(msg: MessageCreate, current_user = Depends(get_current_us
         "is_mine": True,
         "created_at": new_msg["created_at"].isoformat()
     }
+
+# Notifications Endpoints
+@app.get("/api/notifications")
+async def get_notifications(
+    unread_only: bool = False,
+    limit: int = Query(default=20, le=100),
+    current_user = Depends(get_current_user)
+):
+    """Get user notifications"""
+    query = {"user_id": current_user["_id"]}
+    if unread_only:
+        query["read"] = False
+    
+    notifications = notifications_collection.find(query).sort("created_at", -1).limit(limit)
+    
+    return [{
+        "id": str(n["_id"]),
+        "type": n["type"],
+        "title": n["title"],
+        "body": n["body"],
+        "data": n.get("data", {}),
+        "read": n["read"],
+        "created_at": n["created_at"].isoformat()
+    } for n in notifications]
+
+@app.get("/api/notifications/unread-count")
+async def get_unread_count(current_user = Depends(get_current_user)):
+    """Get count of unread notifications"""
+    count = notifications_collection.count_documents({
+        "user_id": current_user["_id"],
+        "read": False
+    })
+    return {"count": count}
+
+@app.put("/api/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user = Depends(get_current_user)):
+    """Mark notification as read"""
+    notifications_collection.update_one(
+        {"_id": ObjectId(notification_id), "user_id": current_user["_id"]},
+        {"$set": {"read": True}}
+    )
+    return {"success": True}
+
+@app.put("/api/notifications/read-all")
+async def mark_all_notifications_read(current_user = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    notifications_collection.update_many(
+        {"user_id": current_user["_id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"success": True}
 
 # AI Suggestions Endpoint
 @app.get("/api/ai/route-suggestions")
@@ -438,7 +644,7 @@ async def get_ai_match_tips(target_user_id: str, current_user = Depends(get_curr
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "app": "GravelMatch API"}
+    return {"status": "healthy", "app": "GravelMatch API", "version": "2.0.0"}
 
 if __name__ == "__main__":
     import uvicorn
