@@ -383,7 +383,7 @@ def main():
     # Test sequence
     tests = [
         ("Health Check", tester.test_health_check),
-        ("User Login", tester.test_login),
+        ("User Registration", tester.test_register),
         ("Get Profile", tester.test_get_profile),
         ("Update Profile", tester.test_update_profile),
         ("Create Route", tester.test_create_route),
