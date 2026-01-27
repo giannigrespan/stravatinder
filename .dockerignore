@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+.gitconfig
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+frontend/build/
+frontend/.expo/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test and coverage
+coverage/
+.pytest_cache/
+test_reports/
+
+# Documentation
+*.md
+!DEPLOYMENT_GUIDE.md
+
+# Other
+memory/
+.emergent/
+*.patch
