@@ -16,7 +16,6 @@ services:
         value: gravelmatch
       - key: SECRET_KEY
         generateValue: true
-        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
@@ -25,6 +24,11 @@ services:
         sync: false
       - key: EMERGENT_LLM_KEY
         sync: false
+      - key: FRONTEND_URL
+        fromService:
+          name: gravelmatch-frontend
+          type: web
+          property: url
     healthCheckPath: /api/health
 
   # Frontend Static Site
@@ -39,4 +43,4 @@ services:
         fromService:
           name: gravelmatch-backend
           type: web
-          property: host
+          property: url
