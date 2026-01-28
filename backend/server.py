@@ -19,7 +19,11 @@ app = FastAPI(title="GravelMatch API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",  # Dev locale
+        "https://*.vercel.app",   # Vercel domains
+        os.environ.get("FRONTEND_URL", "*")  # Dominio custom se hai
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
